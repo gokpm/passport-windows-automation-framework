@@ -1,0 +1,125 @@
+public buffer, objFSO
+public objexcel, excelfilename, objwb, objwsin
+public objword, wordfilename, objfile, activedoc, objrange, objtable, SaveFileLocation
+public screen, data, skip_by, length
+public Text, ret
+
+sub Main()
+	init_buffer()
+	init_excel()
+	init_word()
+	obtain_input()
+	export_to_excel()
+	close_word()
+	close_excel()
+	close_buffer()
+	end sub
+	
+sub init_buffer()
+	buffer = <FILEPATH>
+	set objFSO = CreateObject("Scripting.FileSystemObject")
+	objFSO.CreateTextFile(buffer)
+	end sub
+	
+sub close_buffer()
+	objFSO.DeleteFile(buffer)
+	set objFSO = Nothing
+	end sub
+	
+sub init_excel()
+	set objexcel = CreateObject("Excel.Application")
+	objexcel.visible = False
+	excelfilename = <FILEPATH>
+	set objwb = objexcel.Workbooks.Open(excelfilename)
+	set objwsin = objwb.Worksheets("Input")
+	end sub
+
+sub obtain_input()
+	a = objwsin.cells(1, 1).value
+	b = objwsin.cells(2, 2).value
+	end sub
+	
+sub export_to_excel()
+	objwsin.activate
+	objwsin.cells(1,1).value = a
+	objwsin.cells(2,2).value = b
+	objwsin.cells(1,1).interior.colorindex = 16
+	objwsin.cells(1,1).interior.colorindex = 55
+	end sub
+
+sub close_excel()
+	objexcel.CutCopyMode = False
+	objwb.Save
+	objwb.Close
+	objexcel.Quit
+	set objExcel = Nothing
+	end sub
+
+sub init_word()
+	set objword = CreateObject("Word.Application")
+	objword.visible = False
+	dim fso
+	set fso = CreateObject("Scripting.FileSystemObject")
+	If fso.FileExists(<FILEPATH>) Then
+		wordfilename = <FILEPATH>
+	Else
+		wordfilename = <TEMPLATE PATH>
+		end If
+	objword.Documents.Open wordfilename
+	set objfile = objword.Selection
+	objfile.Font.Name = "Courier New"
+	objfile.Style = "No Spacing"
+	set activedoc = objword.ActiveDocument
+	end sub
+	
+sub word_screenshot()
+	objfile.endkey 6,0
+	objfile.TypeParagraph()
+	set objrange = objfile.Range
+	objrange.Font.Size = "9"
+	objfile.Tables.add objrange,1,1
+	set objtable = objfile.Tables(1)
+	objtable.Cell(1, 1).Range.Text = screen
+	objtable.Borders.Enable = True
+	end sub
+	
+sub close_word()
+	SaveFileLocation = <FILEPATH>
+	activedoc.Saveas(SaveFileLocation)
+	activedoc.close()
+	objword.quit
+	set objword = Nothing
+	end sub	
+	
+sub screen_print()
+	ret = waitforhostupdate(1)
+	writePSToFile buffer,1,1,24,80
+	screen = objFSO.OpenTextFile(buffer, 1).Readall
+	word_screenshot()
+	end sub
+
+Function extract_data(data, skip_by, length)
+	Dim k, extraction
+	k = InStr(1, screen, data)
+	If k <> 0 Then
+		extraction = Mid(screen, k + skip_by, length)
+		extraction = trim(extraction)
+		Else
+			extraction = 0
+		End if
+	extract_data = extraction
+	end function
+	
+sub tab(n)
+	Dim k
+	for k = 1 to n
+		SendHostKeys ("<TAB>")
+	Next
+	end sub
+	
+sub delete(n)
+	Dim k
+	for k = 1 to n
+		SendHostKeys ("<DELETE>")
+	Next
+	end sub
